@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/MIDIPianoQt">
+        <file>Resources/keyboard.bmp</file>
+    </qresource>
+</RCC>
