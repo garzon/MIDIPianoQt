@@ -4,10 +4,13 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/qpushbutton.h>
 #include <qmessagebox.h>
+#include <QFileDialog>
 #include "SettingsDialog.h"
 #include "ui_MIDIPianoQt.h"
 #include "myMIDI.h"
 #include <set>
+
+#include "visualizationdialog.h"
 
 
 #ifndef REP

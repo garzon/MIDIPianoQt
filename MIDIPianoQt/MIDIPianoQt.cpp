@@ -20,8 +20,14 @@ bool isWhite(int note){
 }
 
 void MIDIPianoQt::actionProcessor(QAction *a){
-	if (a == ui.actionConfig){
+    if(a == ui.actionConfig){
 		showConfig();
+    }
+    if(a == ui.actionOpenFile) {
+        QString fileName = QFileDialog::getOpenFileName(this, tr("Open Settings File"), QString(""), tr("WORLDE Settings Files (*.worlde)"));
+        if(fileName.size()) {
+            (new VisualizationDialog(fileName))->show();
+        }
     }
 }
 

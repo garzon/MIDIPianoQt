@@ -58,7 +58,7 @@ bool myMIDI::outputValid() const { return (_outHandle!=NULL); }
 
 MMRESULT myMIDI::sendMsg(unsigned char vol,unsigned char note,unsigned char evt,unsigned char channel) const{
 	if(_outHandle!=NULL)
-		return midiOutShortMsg(_outHandle,vol*0x10000+note*0x100+evt*0x10+channel);
+        return midiOutShortMsg(_outHandle,(vol << 16)|(note << 8)|(evt << 4)|channel);
 	else throw midiNotOpened();
 }
 
