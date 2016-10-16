@@ -2,10 +2,9 @@
 
 using namespace std;
 
-string MidiFileReader::Stream::_dummy;
-
-MidiFileReader::MidiFileReader(string filePath): _rawData("") {
-    ifstream ifs(filePath.c_str(), ios::binary | ios::in | ios::ate);
+MidiFileReader::MidiFileReader(const char *filePath): _rawData("") {
+    std::locale::global(std::locale(""));
+    ifstream ifs(filePath, ios::binary | ios::in | ios::ate);
     if(ifs) {
         auto fileSize = ifs.tellg();
         ifs.seekg(0);
@@ -18,7 +17,7 @@ MidiFileReader::MidiFileReader(string filePath): _rawData("") {
 
 MidiEvent MidiFileReader::readEvent(Stream &stream) {
     MidiEvent event;
-    stream.setOutputBuffer(event.rawData);
+    stream.setOutputBuffer(&event.rawData);
     event.deltaTime = stream.readVarInt();
     unsigned char eventTypeByte = stream.readInt8();
     if ((eventTypeByte & 0xf0) == 0xf0) {
@@ -191,12 +190,6 @@ MidiEvent MidiFileReader::readEvent(Stream &stream) {
                 break;
             default:
                 throw "Unrecognised MIDI event type: " + eventType;
-            /*
-             console.log("Unrecognised MIDI event type: " + eventType);
-             stream.readInt8();
-             event.subtype = 'unknown';
-             return event;
-             */
         }
     }
     stream.setOutputBuffer();
@@ -229,7 +222,7 @@ void MidiFileReader::load(MidiData &midiData) {
     result.formatType = headerStream.readInt16();
     result.trackCount = headerStream.readInt16();
     result.ticksPerBeat = headerStream.readInt16();
-    if(result.ticksPerBeat < 0) {
+    if(result.ticksPerBeat & 0x8000) {
         throw "Expressing time division in SMTPE frames is not supported yet";
     }
 

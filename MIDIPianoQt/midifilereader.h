@@ -98,68 +98,48 @@ private:
 class MidiFileReader {
     class Stream {
         const std::string &rawData;
-        static std::string _dummy;
-        std::string &buffer;
+        std::string *buffer;
         unsigned long long p, n;
-
-        void getRaw(unsigned long long length, bool rewind=true) {
-            if(!hasOutputBuffer()) return;
-            assert(p < n);
-            buffer += rawData.substr(p, length);
-            if(!rewind) p += length;
-        }
-
-        std::string &_tmp;
-        void outputBegin(std::string &newBuffer) {
-            _tmp = buffer;
-            buffer = newBuffer;
-        }
-        void outputEnd() {
-            buffer = _tmp;
-        }
 
     public:
         Stream(const std::string &_rawData):
             rawData(_rawData),
-            buffer(_dummy), _tmp(_dummy), p(0), n(_rawData.length())
+            buffer(NULL), p(0), n(_rawData.length())
         {}
 
         Stream operator = (const Stream &stream) {
             Stream res(stream.rawData);
             res.p = stream.p;
             res.buffer = stream.buffer;
-            res._tmp = stream._tmp;
             return res;
         }
 
-        inline bool hasOutputBuffer() const {
-            return (&_dummy) == (&buffer);
-        }
-
-        void setOutputBuffer(std::string &_buffer = _dummy) {
+        void setOutputBuffer(std::string *_buffer = NULL) {
             buffer = _buffer;
         }
 
         std::string read(unsigned long long length) {
-            getRaw(length);
-            std::string res;
-            outputBegin(res);
-            getRaw(length, false);
-            outputEnd();
+            assert(length <= n-p);
+            std::string res = rawData.substr(p, length);
+            if(buffer != NULL)
+                (*buffer) += res;
+            p += length;
             return res;
         }
 
-        long readInt32() {
-            auto tmp = read(4);
-            return (tmp[0] << 24) | (tmp[1] << 16) | (tmp[2] << 8) | tmp[3];
+        inline long readInt32() {
+            unsigned long tmp = readInt16();
+            unsigned long tmp2 = readInt16();
+            return (tmp << 16) | tmp2;
         }
 
-        int readInt16() {
-            auto tmp = read(2);
-            return (tmp[0] << 8) | tmp[1];
+        inline int readInt16() {
+            unsigned int tmp = readInt8();
+            unsigned int tmp2 = readInt8();
+            return (tmp << 8) | tmp2;
         }
 
-        unsigned char readInt8() {
+        inline unsigned char readInt8() {
             return (unsigned char)(read(1)[0]);
         }
 
@@ -201,7 +181,7 @@ class MidiFileReader {
 
     void readChunk(Stream &stream, std::string &id, std::string &data);
 public:
-    MidiFileReader(std::string filePath);
+    MidiFileReader(const char *filePath);
     ~MidiFileReader() {}
     MidiEvent readEvent(Stream &stream);
     void load(MidiData &midiData);

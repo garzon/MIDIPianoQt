@@ -24,7 +24,7 @@ void MIDIPianoQt::actionProcessor(QAction *a){
 		showConfig();
     }
     if(a == ui.actionOpenFile) {
-        QString fileName = QFileDialog::getOpenFileName(this, tr("Open Settings File"), QString(""), tr("WORLDE Settings Files (*.worlde)"));
+        QString fileName = QFileDialog::getOpenFileName(this, tr("Open Midi File"), QString(""), tr("Midi Files (*.mid;*.midi)"));
         if(fileName.size()) {
             (new VisualizationDialog(fileName))->show();
         }
