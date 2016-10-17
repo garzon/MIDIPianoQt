@@ -4,13 +4,15 @@
 
 using namespace std;
 
-#define EMPLACE_BACK_3(v, p) v.emplace_back(get<0>(p)); v.emplace_back(get<1>(p)); v.emplace_back(get<2>(p))
-#define EMPLACE_BACK_4(v, p) EMPLACE_BACK_3(v, p); v.emplace_back(get<3>(p))
+#define EMPLACE_BACK_3(v, p) v.emplace_back(p.x()); v.emplace_back(p.y()); v.emplace_back(p.z())
+#define EMPLACE_BACK_4(v, p) EMPLACE_BACK_3(v, p); v.emplace_back(p.w())
 #define EMPLACE_COLOR(v, c) EMPLACE_BACK_4(v, c);EMPLACE_BACK_4(v, c);EMPLACE_BACK_4(v, c)
 
 // 1px/3000ms
 #define convertMsToPx(ms) (ms*1.0/3000.0)
 #define nowY ((GLfloat)(convertMsToPx(now)))
+
+static const QVector4D DUMMY_COLOR(0,0,0,1);
 
 static inline bool isWhite(int note){
     note %= 12;
@@ -33,31 +35,28 @@ static GLfloat linearMap(GLfloat v, GLfloat oMin, GLfloat oMax, GLfloat nMin, GL
     return (v - oMin) / (oMax - oMin) * (nMax - nMin) + nMin;
 }
 
-MyVertex operator + (const MyVertex &a, const MyVertex &b) {
-    return MyVertex(std::get<0>(a)+std::get<0>(b), std::get<1>(a)+std::get<1>(b), std::get<2>(a)+std::get<2>(b));
-}
-MyVertex operator - (const MyVertex &a, const MyVertex &b) {
-    return MyVertex(std::get<0>(a)-std::get<0>(b), std::get<1>(a)-std::get<1>(b), std::get<2>(a)-std::get<2>(b));
-}
-
-void MidiOpenGLWidget::addRect(const MyVertex &p, const MyVertex &pBottom, const MyVertex &pRight, const MyColor &c) {
-    MyVertex p_ = pBottom + pRight - p;
+void MidiOpenGLWidget::addRect(const QVector3D &p, const QVector3D &pBottom, const QVector3D &pRight, const QVector4D &c) {
+    QVector3D p_ = pBottom + pRight - p;
     addTriangle(p, pBottom, p_, c);
     addTriangle(p, p_, pRight, c);
 }
 
-void MidiOpenGLWidget::addTriangle(const MyVertex& p1, const MyVertex& p2, const MyVertex& p3, const MyColor& c) {
-    EMPLACE_BACK_3((*outputPosVec), p1);
-    EMPLACE_BACK_3((*outputPosVec), p2);
-    EMPLACE_BACK_3((*outputPosVec), p3);
-    EMPLACE_COLOR((*outputColorVec), c);
+void MidiOpenGLWidget::addTriangle(const QVector3D& p1, const QVector3D& p2, const QVector3D& p3, const QVector4D &c) {
+    if(outputPosVec) {
+        EMPLACE_BACK_3((*outputPosVec), p1);
+        EMPLACE_BACK_3((*outputPosVec), p2);
+        EMPLACE_BACK_3((*outputPosVec), p3);
+    }
+    if(outputColorVec) {
+        EMPLACE_COLOR((*outputColorVec), c);
+    }
 }
 
-void MidiOpenGLWidget::addQuad(const MyVertex& p, const MyVertex& px, const MyVertex& py, const MyVertex& pz, const MyColor& c) {
-    MyVertex pxpy = px + py - p;
-    MyVertex pypz = py + pz - p;
-    MyVertex pxpz = px + pz - p;
-    MyVertex p_ = pxpz + pypz - pz;
+void MidiOpenGLWidget::addQuad(const QVector3D& p, const QVector3D& px, const QVector3D& py, const QVector3D& pz, const QVector4D &c) {
+    QVector3D pxpy = px + py - p;
+    QVector3D pypz = py + pz - p;
+    QVector3D pxpz = px + pz - p;
+    QVector3D p_ = pxpz + pypz - pz;
 
     // bottom
     // p -> px -> pxpy
@@ -106,15 +105,17 @@ void MidiOpenGLWidget::addMidiNoteBar(unsigned long absTime, unsigned long lastT
     GLfloat nChan = ((GLfloat)((channel & 1) ? (-((channel+1) >> 1)) : (channel >> 1))) / 8.0 * maxZ;
     GLfloat nh = maxZ / 8.0 / 2.0;
     addQuad(
-        MyVertex(sx, convertMsToPx(absTime), nChan),
-        MyVertex(sx+nw, convertMsToPx(absTime), nChan),
-        MyVertex(sx, convertMsToPx(lastToTime), nChan),
-        MyVertex(sx, convertMsToPx(absTime), nChan+nh),
+        QVector3D(sx, convertMsToPx(absTime), nChan),
+        QVector3D(sx+nw, convertMsToPx(absTime), nChan),
+        QVector3D(sx, convertMsToPx(lastToTime), nChan),
+        QVector3D(sx, convertMsToPx(absTime), nChan+nh),
         rgba(128,128,128)
     );
 }
 
 void MidiOpenGLWidget::loadMidiData(MidiData &midiData) {
+    totalTime = midiData.totalTime;
+
     auto end = midiData.end();
     int counter = 0;
     for(auto p=midiData.begin(); p!=end; ++p) {
@@ -130,10 +131,6 @@ void MidiOpenGLWidget::loadMidiData(MidiData &midiData) {
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     timer->start(10);
     fromStart.start();
-}
-
-void MidiOpenGLWidget::calcPos() {
-    now = (fromStart.elapsed() % 10000);
 }
 
 void MidiOpenGLWidget::initializeGL() {
@@ -181,7 +178,7 @@ void MidiOpenGLWidget::initializeGL() {
         close();
     }
     if(!planeProgram.addShaderFromSourceCode(QOpenGLShader::Fragment,
-          "void main() { gl_FragColor = vec4(1.0,1.0,1.0,0.3); }")) {
+          "uniform highp vec4 color; void main() { gl_FragColor = color; }")) {
         QMessageBox::warning(this, "QOpenGLShader::Fragment", "QOpenGLShader::Fragment" + program.log());
         close();
     }
@@ -191,16 +188,21 @@ void MidiOpenGLWidget::initializeGL() {
 
     planeProjMatrixLoc = planeProgram.uniformLocation("projMatrix");
     planeMvMatrixLoc = planeProgram.uniformLocation("mvMatrix");
-
     planeVBO.create();
     planeVBO.bind();
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    /*planeColorVBO.create();
+    planeColorVBO.bind();
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 0, 0);*/
+
     planeProgram.release();
 }
 
 void MidiOpenGLWidget::paintGL() {
-    calcPos();
+    now = (fromStart.elapsed() % totalTime);
 
     m_proj.setToIdentity();
     m_world.setToIdentity();
@@ -212,10 +214,10 @@ void MidiOpenGLWidget::paintGL() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     if(!is2dView) {
-        m_proj.perspective(45.0f, GLfloat(width()) / height(), 0.01f, 100.0f);
+        m_proj.perspective(18.0f, GLfloat(width()) / height(), 0.01f, 100.0f);
         m_world.lookAt(
-            QVector3D(4,nowY+3,3),
-            QVector3D(0,nowY,0),
+            QVector3D(4,nowY+5,maxZ+1),
+            QVector3D(0,nowY+1,0),
             QVector3D(0,0,1)
         );
     } else {
@@ -242,32 +244,66 @@ void MidiOpenGLWidget::paintGL() {
         1, nowY, -maxZ,
         -1, nowY, -maxZ,
     };
+    drawDynamics(planeVertexs, QVector4D(1,1,1,0.3));
 
-    // draw keyboard
-    /*
+    // -------------------  draw keyboard
     const GLfloat zDown = -0.25;
     const GLfloat zUp = 0.25;
-    MyColor whiteColor(1,1,1,0.4), blackColor(0,0,0,0.4);
+    const GLfloat alpha = 0.5;
+    const GLfloat eps = 0.001;
+
+    // draw white keys
+    drawDynamicsBegin(planeVertexs);
+    addRect(
+        QVector3D(1.0, nowY+eps, zUp),
+        QVector3D(1.0, nowY+eps, zDown),
+        QVector3D(-1.0, nowY+eps, zUp),
+        DUMMY_COLOR
+    );
+    drawDynamics(planeVertexs, QVector4D(1,1,1,1));
+
+    // draw black keys
+    drawDynamicsBegin(planeVertexs);
     for(int i = keyStart; i <= keyEnd; i++){
-        bool _isWhite = isWhite(note);
-        GLfloat w = _isWhite ? whiteW : blackW;
-        GLfloat sx = linearMap(note, keyStart, keyEnd, -1.0, 1.0);
-        GLfloat nw = w/(whiteW*whiteNum)*2.0;
-        GLfloat nChan = ((GLfloat)((channel & 1) ? (-((channel+1) >> 1)) : (channel >> 1))) / 8.0 * maxZ;
-        GLfloat nh = maxZ / 8.0 / 2.0;
+        if(isWhite(i)) continue;
+        GLfloat sx = linearMap(i, keyStart, keyEnd, -1.0, 1.0);
+        GLfloat nw = blackW/(whiteW*whiteNum)*2.0;
         addRect(
-            MyVertex(sx, convertMsToPx(absTime), nChan),
-            MyVertex(sx, convertMsToPx(absTime), nChan),
-            MyVertex(sx+nw, convertMsToPx(absTime), nChan),
-            _isWhite ? whiteColor : blackColor
+            QVector3D(sx, nowY+eps*2, zUp),
+            QVector3D(sx, nowY+eps*2, zDown+0.125),
+            QVector3D(sx+nw, nowY+eps*2, zUp),
+            DUMMY_COLOR
         );
     }
-    */
+    drawDynamics(planeVertexs, QVector4D(0,0,0,alpha));
 
-    planeVBO.allocate(planeVertexs.data(), planeVertexs.size()*sizeof(GLfloat));
-    planeVBO.bind();
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    // for debugging
+    drawDynamicsBegin(planeVertexs);
+    addRect(
+        QVector3D(-1, 0, -1),
+        QVector3D(1, 0, -1),
+        QVector3D(-1, 5, -1),
+        DUMMY_COLOR
+    );
+    drawDynamics(planeVertexs, QVector4D(0,1,0,alpha));
+
     planeProgram.release();
+}
+
+void MidiOpenGLWidget::drawDynamicsBegin(vector<GLfloat> &buffer) {
+    buffer.clear();
+    outputPosVec = &buffer;
+    outputColorVec = NULL;
+}
+
+void MidiOpenGLWidget::drawDynamics(vector<GLfloat> &buffer, const QVector4D &color, GLenum mode) {
+    outputPosVec = &vertexPositions;
+    outputColorVec = &vertexColors;
+    size_t bufferSize = buffer.size();
+    planeVBO.allocate(buffer.data(), bufferSize*sizeof(GLfloat));
+    planeVBO.bind();
+    planeProgram.setUniformValue("color", color);
+    glDrawArrays(mode, 0, bufferSize/3);
 }
 
 void MidiOpenGLWidget::switchView() {
