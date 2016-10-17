@@ -15,6 +15,8 @@ struct MidiEvent {
     unsigned long long absoluteTicks;
     unsigned long long absoluteTime;
     unsigned long long lastTime;  // lastTicks in fact
+    unsigned int trackId;
+    long lastEventIdx = -1;
     enum {
         META, SYSEX, DIV_SYSEX, CHANNEL
     } type;
@@ -90,6 +92,97 @@ struct MidiData {
         calcLastTimeOfEvents();
         calcAbsoluteTime();
     }
+
+
+    class iterator {
+        std::vector<size_t> currentEventAtTrackId;
+        long long absTicks;
+    public:
+        friend struct MidiData;
+
+        typedef MidiData T;
+        typedef iterator self;
+        typedef T value_type;
+        typedef MidiEvent *pointer;
+        typedef MidiEvent &reference;
+        typedef size_t size_type;
+        T *data;
+
+
+        iterator(T *x): data(x), absTicks(-1) {
+            currentEventAtTrackId.resize(data->tracks.size(), 0);
+            for(size_t i=0; i<currentEventAtTrackId.size(); i++) {
+                if(currentEventAtTrackId[i] >= data->tracks[i].size()) continue;
+                MidiEvent &event = data->tracks[i][currentEventAtTrackId[i]];
+                if((long long)event.absoluteTicks < absTicks || absTicks == -1) absTicks = event.absoluteTicks;
+            }
+        }
+        iterator(): data(NULL), absTicks(-1) { }
+
+        bool operator==(const self& x) const {
+            if(data != x.data) return false;
+            //if(currentEventAtTrackId.size() != x.currentEventAtTrackId.size())
+            //    throw "Same midiData with different trackNum in iterator.";
+            if(absTicks != x.absTicks) return false;
+            int n = currentEventAtTrackId.size();
+            for(int i=0; i<n; i++) if(currentEventAtTrackId[i] != x.currentEventAtTrackId[i]) return false;
+            return true;
+        }
+        bool operator!=(const self& x) const { return !(operator==(x)); }
+
+        reference operator*() {
+            for(size_t i=0; i<currentEventAtTrackId.size(); i++) {
+                if(currentEventAtTrackId[i] >= data->tracks[i].size()) continue;
+                MidiEvent &event = data->tracks[i][currentEventAtTrackId[i]];
+                if(event.absoluteTicks == absTicks) return event;
+            }
+            throw "MidiData::iterator::operator*() - Error.";
+        }
+        pointer operator->() { return &(operator*()); }
+
+        self& operator++() {
+            bool finishFlag = true, notFoundFlag = true;
+            for(size_t i=0; i<currentEventAtTrackId.size(); i++) {
+                if(currentEventAtTrackId[i] >= data->tracks[i].size()) continue;
+                finishFlag = false;
+                MidiEvent &event = data->tracks[i][currentEventAtTrackId[i]];
+                if(event.absoluteTicks == absTicks) {
+                    currentEventAtTrackId[i]++;
+                    notFoundFlag = false;
+                    break;
+                }
+            }
+            if(finishFlag || notFoundFlag) throw "MidiData::iterator::operator++() - Error.";
+            absTicks = 1999999999;
+            finishFlag = true;
+            for(size_t i=0; i<currentEventAtTrackId.size(); i++) {
+                if(currentEventAtTrackId[i] >=  data->tracks[i].size()) continue;
+                finishFlag = false;
+                MidiEvent &event = data->tracks[i][currentEventAtTrackId[i]];
+                if((long long)event.absoluteTicks < absTicks) {
+                    absTicks = (long long)(event.absoluteTicks);
+                }
+            }
+            if(finishFlag) {
+                absTicks = -1;
+            }
+            return (*this);
+        }
+    };
+
+    iterator begin() {
+        return iterator(this);
+    }
+
+    iterator end() {
+        iterator res(this);
+        for(size_t i=0; i<tracks.size(); i++) {
+            res.currentEventAtTrackId[i] = tracks[i].size();
+        }
+        res.absTicks = -1;
+        return res;
+    }
+
 private:
     void calcLastTimeOfEvents();
     void calcAbsoluteTime();

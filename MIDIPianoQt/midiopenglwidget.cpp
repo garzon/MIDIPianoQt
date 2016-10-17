@@ -4,54 +4,34 @@
 
 using namespace std;
 
-MidiOpenGLWidget::MidiOpenGLWidget(QWidget *parent):
-    QOpenGLWidget(parent)
-{
-    vertexPositions = {
-        /*-1.0f, -1.0f, 0.0f,
-        1.0f, -1.0f, 0.0f,
-        0.0f,  1.0f, 0.0f,
-
-        -1.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
-        0.0f,  -1.0f, 0.0f,*/
-    };
-
-    vertexColors = {
-       /* 0.0f, 0.0f, (GLfloat)((time(0)%25)/25.0), 0.0f,
-        1.0f, 1.0f, 0.0f, 0.0f,
-        0.0f,  1.0f, 0.0f, 0.0f,
-
-        1.0f, 1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 0.0f, 0.0f,
-        0.0f,  1.0f, 0.0f, 0.0f,*/
-    };
-
-    MyVertex p(0, 1.5, 0);
-    MyVertex px(0.5, 1, 0);
-    MyVertex py(0.5, 2, 0);
-    MyVertex pz(0, 1.5, 1);
-    addQuad(p, px, py, pz, rgba(128, 255, 255));
-
-    MyVertex p2(0, 0, 0);
-    MyVertex px2(1, 0, 0);
-    MyVertex py2(0, 1, 0);
-    MyVertex pz2(0, 0, 1);
-    addQuad(p2, px2, py2, pz2, rgba(128, 255, 255, 0.3));
-
-    QTimer *timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-    timer->start(100);
-
-    fromStart.start();
-}
-
 #define EMPLACE_BACK_3(v, p) v.emplace_back(get<0>(p)); v.emplace_back(get<1>(p)); v.emplace_back(get<2>(p))
 #define EMPLACE_BACK_4(v, p) EMPLACE_BACK_3(v, p); v.emplace_back(get<3>(p))
 #define EMPLACE_COLOR(v, c) EMPLACE_BACK_4(v, c);EMPLACE_BACK_4(v, c);EMPLACE_BACK_4(v, c)
 
-// 1px/3s
-#define nowY (now * 1.0/3.0)
+// 1px/3000ms
+#define convertMsToPx(ms) (ms*1.0/3000.0)
+#define nowY ((GLfloat)(convertMsToPx(now)))
+
+static inline bool isWhite(int note){
+    note %= 12;
+    if(note == 0) return true;
+    if(note == 2) return true;
+    if(note == 4) return true;
+    if(note == 5) return true;
+    if(note == 7) return true;
+    if(note == 9) return true;
+    if(note == 11) return true;
+    return false;
+}
+
+
+MidiOpenGLWidget::MidiOpenGLWidget(QWidget *parent):
+    QOpenGLWidget(parent), outputPosVec(&vertexPositions), outputColorVec(&vertexColors)
+{}
+
+static GLfloat linearMap(GLfloat v, GLfloat oMin, GLfloat oMax, GLfloat nMin, GLfloat nMax) {
+    return (v - oMin) / (oMax - oMin) * (nMax - nMin) + nMin;
+}
 
 MyVertex operator + (const MyVertex &a, const MyVertex &b) {
     return MyVertex(std::get<0>(a)+std::get<0>(b), std::get<1>(a)+std::get<1>(b), std::get<2>(a)+std::get<2>(b));
@@ -60,11 +40,17 @@ MyVertex operator - (const MyVertex &a, const MyVertex &b) {
     return MyVertex(std::get<0>(a)-std::get<0>(b), std::get<1>(a)-std::get<1>(b), std::get<2>(a)-std::get<2>(b));
 }
 
+void MidiOpenGLWidget::addRect(const MyVertex &p, const MyVertex &pBottom, const MyVertex &pRight, const MyColor &c) {
+    MyVertex p_ = pBottom + pRight - p;
+    addTriangle(p, pBottom, p_, c);
+    addTriangle(p, p_, pRight, c);
+}
+
 void MidiOpenGLWidget::addTriangle(const MyVertex& p1, const MyVertex& p2, const MyVertex& p3, const MyColor& c) {
-    EMPLACE_BACK_3(vertexPositions, p1);
-    EMPLACE_BACK_3(vertexPositions, p2);
-    EMPLACE_BACK_3(vertexPositions, p3);
-    EMPLACE_COLOR(vertexColors, c);
+    EMPLACE_BACK_3((*outputPosVec), p1);
+    EMPLACE_BACK_3((*outputPosVec), p2);
+    EMPLACE_BACK_3((*outputPosVec), p3);
+    EMPLACE_COLOR((*outputColorVec), c);
 }
 
 void MidiOpenGLWidget::addQuad(const MyVertex& p, const MyVertex& px, const MyVertex& py, const MyVertex& pz, const MyColor& c) {
@@ -106,8 +92,48 @@ void MidiOpenGLWidget::addQuad(const MyVertex& p, const MyVertex& px, const MyVe
     addTriangle(py, pypz, p_, c);
 }
 
+
+static const GLfloat whiteW = 16.0, blackW = 11.0;
+static const int keyStart = 21, keyEnd = keyStart + 87;
+static const GLfloat whiteNum = 45.0, blackNum = 33.0;
+static const GLfloat maxZ = 2;
+
+void MidiOpenGLWidget::addMidiNoteBar(unsigned long absTime, unsigned long lastToTime, int note, int channel) {
+    if(note < keyStart || note > keyEnd) return;
+    GLfloat w = isWhite(note) ? whiteW : blackW;
+    GLfloat sx = linearMap(note, keyStart, keyEnd, -1.0, 1.0);
+    GLfloat nw = w/(whiteW*whiteNum)*2.0;
+    GLfloat nChan = ((GLfloat)((channel & 1) ? (-((channel+1) >> 1)) : (channel >> 1))) / 8.0 * maxZ;
+    GLfloat nh = maxZ / 8.0 / 2.0;
+    addQuad(
+        MyVertex(sx, convertMsToPx(absTime), nChan),
+        MyVertex(sx+nw, convertMsToPx(absTime), nChan),
+        MyVertex(sx, convertMsToPx(lastToTime), nChan),
+        MyVertex(sx, convertMsToPx(absTime), nChan+nh),
+        rgba(128,128,128)
+    );
+}
+
+void MidiOpenGLWidget::loadMidiData(MidiData &midiData) {
+    auto end = midiData.end();
+    int counter = 0;
+    for(auto p=midiData.begin(); p!=end; ++p) {
+        MidiEvent &event = *p;
+        if(event.subtype == MidiEvent::NOTE_ON && event.lastEventIdx != -1) {
+            addMidiNoteBar(event.absoluteTime, midiData.tracks[event.trackId][event.lastEventIdx].absoluteTime, event.noteNumber, event.channel);
+        }
+        counter ++;
+    }
+
+    // ---------------------------------------------- auto refresher
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+    timer->start(10);
+    fromStart.start();
+}
+
 void MidiOpenGLWidget::calcPos() {
-    now = (fromStart.elapsed() % 10000) *1.0 / 1000;
+    now = (fromStart.elapsed() % 10000);
 }
 
 void MidiOpenGLWidget::initializeGL() {
@@ -148,8 +174,6 @@ void MidiOpenGLWidget::initializeGL() {
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
     program.release();
-
-// - /////////////////////////////////////////
 
     if(!planeProgram.addShaderFromSourceCode(QOpenGLShader::Vertex,
           "attribute vec4 position; uniform mat4 projMatrix; uniform mat4 mvMatrix; void main() { gl_Position = projMatrix * mvMatrix * position; }")) {
@@ -198,7 +222,6 @@ void MidiOpenGLWidget::paintGL() {
         m_world.translate(0, -nowY-1, 0);
     }
 
-
     QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
     program.bind();
     program.setUniformValue(m_projMatrixLoc, m_proj);
@@ -209,8 +232,8 @@ void MidiOpenGLWidget::paintGL() {
     planeProgram.bind();
     planeProgram.setUniformValue(m_projMatrixLoc, m_proj);
     planeProgram.setUniformValue(m_mvMatrixLoc, m_world);
-    const GLfloat maxZ = 2;
-    const GLfloat planeVertexs[] = {
+
+    vector<GLfloat> planeVertexs {
         -1, nowY, -maxZ,
         -1, nowY, maxZ,
         1, nowY, maxZ,
@@ -219,7 +242,29 @@ void MidiOpenGLWidget::paintGL() {
         1, nowY, -maxZ,
         -1, nowY, -maxZ,
     };
-    planeVBO.allocate(planeVertexs, sizeof(planeVertexs));
+
+    // draw keyboard
+    /*
+    const GLfloat zDown = -0.25;
+    const GLfloat zUp = 0.25;
+    MyColor whiteColor(1,1,1,0.4), blackColor(0,0,0,0.4);
+    for(int i = keyStart; i <= keyEnd; i++){
+        bool _isWhite = isWhite(note);
+        GLfloat w = _isWhite ? whiteW : blackW;
+        GLfloat sx = linearMap(note, keyStart, keyEnd, -1.0, 1.0);
+        GLfloat nw = w/(whiteW*whiteNum)*2.0;
+        GLfloat nChan = ((GLfloat)((channel & 1) ? (-((channel+1) >> 1)) : (channel >> 1))) / 8.0 * maxZ;
+        GLfloat nh = maxZ / 8.0 / 2.0;
+        addRect(
+            MyVertex(sx, convertMsToPx(absTime), nChan),
+            MyVertex(sx, convertMsToPx(absTime), nChan),
+            MyVertex(sx+nw, convertMsToPx(absTime), nChan),
+            _isWhite ? whiteColor : blackColor
+        );
+    }
+    */
+
+    planeVBO.allocate(planeVertexs.data(), planeVertexs.size()*sizeof(GLfloat));
     planeVBO.bind();
     glDrawArrays(GL_TRIANGLES, 0, 6);
     planeProgram.release();

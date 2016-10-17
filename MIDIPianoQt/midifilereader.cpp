@@ -153,7 +153,7 @@ MidiEvent MidiFileReader::readEvent(Stream &stream) {
         event.type = MidiEvent::CHANNEL;
         switch (eventType) {
             case 0x08:
-                event.subtype = MidiEvent::NOTE_ON;
+                event.subtype = MidiEvent::NOTE_OFF;
                 event.noteNumber = param1;
                 event.velocity = stream.readInt8();
                 break;
@@ -215,7 +215,7 @@ void MidiFileReader::load(MidiData &midiData) {
 
     try {
         readChunk(stream, id, tmpData);
-    } catch(const char* ex) {
+    } catch(const char*) {
         throw "MidiFileReader::load() - Not a valid MIDI file.";
     }
     if(id != "MThd" || tmpData.length() != 6) {
@@ -235,7 +235,7 @@ void MidiFileReader::load(MidiData &midiData) {
     for(int i=0; i<result.trackCount; i++) {
         try {
             readChunk(stream, id, tmpData);
-        } catch(const char *ex) {
+        } catch(const char*) {
             throw "MidiFileReader::load() - Midi file corrupted.";
         }
         if(id != "MTrk") {
@@ -245,7 +245,7 @@ void MidiFileReader::load(MidiData &midiData) {
         while(trackStream.length()) {
             try {
                 tracks[i].emplace_back(readEvent(trackStream));
-            } catch(const char *ex) {
+            } catch(const char*) {
                 throw "MidiFileReader::load() - Midi file corrupted. Fail to parse midi event.";
             }
         }
@@ -267,15 +267,16 @@ void MidiData::calcLastTimeOfEvents() {
         int evtNum = tracks[i].size();
         for(int j=0; j<evtNum; j++) {
             MidiEvent &event = tracks[i][j];
-            absoluteTicks += event.deltaTime;
+            absoluteTicks += (unsigned long)event.deltaTime;
             event.absoluteTicks = absoluteTicks;
-
+            event.trackId = i;
             if(event.subtype == MidiEvent::NOTE_ON) {
                 unsigned int idx = noteIdx(event.channel, event.noteNumber);
                 pair<int, int> lastInfo = lastNoteOnEvtIdx[idx];
                 if(lastInfo.second != 0) {
                     MidiEvent &prevEvt = tracks[lastInfo.first][lastInfo.second];
                     prevEvt.lastTime = absoluteTicks - prevEvt.absoluteTicks;
+                    prevEvt.lastEventIdx = j;
                 }
                 lastNoteOnEvtIdx[idx] = pair<int, int>(i, j);
             } else if(event.subtype == MidiEvent::NOTE_OFF) {
@@ -284,6 +285,7 @@ void MidiData::calcLastTimeOfEvents() {
                 if(lastInfo.second != 0) {
                     MidiEvent &prevEvt = tracks[lastInfo.first][lastInfo.second];
                     prevEvt.lastTime = absoluteTicks - prevEvt.absoluteTicks;
+                    prevEvt.lastEventIdx = j;
                     lastNoteOnEvtIdx.erase(idx);
                 }
             }
@@ -295,13 +297,14 @@ void MidiData::calcLastTimeOfEvents() {
         if(info.second) {
             MidiEvent &prevEvt = tracks[info.first][info.second];
             prevEvt.lastTime = -1;
+            prevEvt.lastEventIdx = -1;
         }
     }
 #undef noteIdx
 }
 
 void MidiData::calcAbsoluteTime() {
-    vector<int> currentEventAtTrackId;
+    vector<size_t> currentEventAtTrackId;
     currentEventAtTrackId.resize(this->header.trackCount, -1);
     double absoluteTime = 0.0;
     bool finishFlag = false;
@@ -335,6 +338,6 @@ void MidiData::calcAbsoluteTime() {
             }
         }
     }
-    totalTime = absoluteTime;
+    totalTime = (unsigned long)absoluteTime;
 #undef ticksToMs
 }

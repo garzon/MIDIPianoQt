@@ -8,9 +8,6 @@ VisualizationDialog::VisualizationDialog(QWidget *parent) :
     controller(NULL)
 {
     ui->setupUi(this);
-    //QTimer *timer = new QTimer(this);
-    //connect(timer, SIGNAL(timeout()), this, SLOT(ui->openGLWidget->update()));
-    //timer->start(10);
 }
 
 VisualizationDialog *VisualizationDialog::loadMidiFile(QString midiFilePath) {
@@ -26,6 +23,7 @@ VisualizationDialog *VisualizationDialog::loadMidiFile(QString midiFilePath) {
     }
 
     controller = new MidiController(midiData);
+    ui->openGLWidget->loadMidiData(midiData);
     return this;
 }
 

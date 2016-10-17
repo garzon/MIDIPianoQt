@@ -16,25 +16,11 @@
 #include <QTimer>
 #include <QTime>
 #include <QOpenGLShaderProgram>
+#include <QPushButton>
 
 #include <QMessageBox>
 
-class Logo
-{
-public:
-    Logo();
-    const GLfloat *constData() const { return m_data.constData(); }
-    int count() const { return m_count; }
-    int vertexCount() const { return m_count / 6; }
-
-private:
-    void quad(GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2, GLfloat x3, GLfloat y3, GLfloat x4, GLfloat y4);
-    void extrude(GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2);
-    void add(const QVector3D &v, const QVector3D &n);
-
-    QVector<GLfloat> m_data;
-    int m_count;
-};
+#include "midifilereader.h"
 
 typedef std::tuple<GLfloat, GLfloat, GLfloat> MyVertex;
 typedef std::tuple<GLfloat, GLfloat, GLfloat, GLfloat> MyColor;
@@ -47,7 +33,9 @@ public:
     MidiOpenGLWidget(QWidget *parent = 0);
 
     void addTriangle(const MyVertex& p1, const MyVertex& p2, const MyVertex& p3, const MyColor& c);
+    void addRect(const MyVertex &p, const MyVertex &pBottom, const MyVertex &pRight, const MyColor &c);
     void addQuad(const MyVertex& p, const MyVertex& px, const MyVertex& py, const MyVertex& pz, const MyColor& c);
+    void addMidiNoteBar(unsigned long absTime, unsigned long lastToTime, int note, int channel);
 
     static MyColor rgba(int r, int g, int b, GLfloat a=1.0) {
         r = rand()%256;
@@ -57,7 +45,8 @@ public:
     }
 
     void switchView();
-    void drawPlane();
+    void loadMidiData(MidiData &midiData);
+
 
 protected:
     void initializeGL();
@@ -81,7 +70,7 @@ protected:
     QTime fromStart;
 
     bool is2dView;
-    std::vector<GLfloat> vertexPositions, vertexColors;
+    std::vector<GLfloat> vertexPositions, vertexColors, *outputPosVec, *outputColorVec;
 };
 
 #endif // MIDIOPENGLWIDGET_H

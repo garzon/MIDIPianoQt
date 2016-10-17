@@ -9,7 +9,7 @@ static const QString defaultStyleString[] = {
 
 static const QString pressedStyleString = "background-color: #00FF00;";
 
-bool isWhite(int note){
+static bool isWhite(int note){
 	while (note>71) note -= 12;
 	while (note<60) note += 12;
 	static const int whiteKey[] = { 60, 62, 64, 65, 67, 69, 71 };
@@ -24,11 +24,11 @@ void MIDIPianoQt::actionProcessor(QAction *a){
 		showConfig();
     }
     if(a == ui.actionOpenFile) {
-        //QString fileName = QFileDialog::getOpenFileName(this, tr("Open Midi File"), QString(""), tr("Midi Files (*.mid;*.midi)"));
-        //if(fileName.size()) {
-            VisualizationDialog *dialog = (new VisualizationDialog(this));//->loadMidiFile(fileName);
+        QString fileName = QFileDialog::getOpenFileName(this, tr("Open Midi File"), QString(""), tr("Midi Files (*.mid;*.midi)"));
+        if(fileName.size()) {
+            VisualizationDialog *dialog = (new VisualizationDialog(this))->loadMidiFile(fileName);
             if(dialog) dialog->show();
-        //}
+        }
     }
 }
 
@@ -179,8 +179,8 @@ MIDIPianoQt::MIDIPianoQt(QWidget *parent)
 	}
 	if(!midiPointer->inputValid()){
         // QMessageBox::warning(0,"Warning","Cannot open midi input device!",QMessageBox::StandardButton::Ok);
-	}
-	setupButtons(36,96);
+    }
+    setupButtons(21,96);
 }
 
 void MIDIPianoQt::showConfig(){
