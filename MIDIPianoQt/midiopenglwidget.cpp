@@ -193,11 +193,6 @@ void MidiOpenGLWidget::initializeGL() {
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-    /*planeColorVBO.create();
-    planeColorVBO.bind();
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 0, 0);*/
-
     planeProgram.release();
 }
 
@@ -278,6 +273,7 @@ void MidiOpenGLWidget::paintGL() {
     }
     drawDynamics(planeVertexs, QVector4D(0,0,0,alpha));
 
+    /*
     // for debugging
     drawDynamicsBegin(planeVertexs);
     addRect(
@@ -287,6 +283,7 @@ void MidiOpenGLWidget::paintGL() {
         DUMMY_COLOR
     );
     drawDynamics(planeVertexs, QVector4D(0,1,0,alpha));
+    */
 
     planeProgram.release();
 }

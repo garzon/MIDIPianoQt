@@ -7,7 +7,7 @@
 #include <QFileDialog>
 #include "SettingsDialog.h"
 #include "ui_MIDIPianoQt.h"
-#include "myMIDI.h"
+#include "MidiIOManager.h"
 #include <set>
 
 #include "visualizationdialog.h"
@@ -38,13 +38,13 @@ public:
 	MIDIPianoQt(QWidget *parent = 0);
 	~MIDIPianoQt();
 	void setupButtons(int minIndex,int maxIndex);
-	void playNote(int note,int volume=100);
+    void playNote(int note, int volume=100, int channel=0);
 	void clearNote(int note);
 	void stopNote(int note);
 	void stopAll();
 	bool isSubstained;
 private slots:
-	void doPressed(int index,int vol=-1);
+    void doPressed(int index, int vol = -1, int channel = 0);
 	void doReleased(int index);
 	void buttonPressed();
 	void buttonReleased();
@@ -54,7 +54,7 @@ private:
 	SettingsDialog *configDlg;
 	myButton *buttons[130];
 	int _minIndex,_maxIndex;
-	myMIDI *midiPointer;
+    MidiIOManager *midiPointer;
 	void showConfig();
 	void keyPressEvent(QKeyEvent *);
 	std::set<int> playedNotes;

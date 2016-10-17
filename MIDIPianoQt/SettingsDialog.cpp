@@ -1,6 +1,6 @@
 #include "SettingsDialog.h"
 
-SettingsDialog::SettingsDialog(myMIDI *handle, QWidget *parent)
+SettingsDialog::SettingsDialog(MidiIOManager *handle, QWidget *parent)
 	: QWidget(parent), _handle(handle)
 {
 	ui.setupUi(this);

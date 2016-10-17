@@ -4,14 +4,14 @@
 #include <QWidget>
 #include "ui_SettingsDialog.h"
 
-#include <myMIDI.h>
+#include <MidiIOManager.h>
 
 class SettingsDialog : public QWidget
 {
 	Q_OBJECT
 
 public:
-	SettingsDialog(myMIDI *handle, QWidget *parent = 0);
+    SettingsDialog(MidiIOManager *handle, QWidget *parent = 0);
 	~SettingsDialog();
 
 private slots:
@@ -19,7 +19,7 @@ private slots:
 
 private:
 	Ui::SettingsDialog ui;
-	myMIDI *_handle;
+    MidiIOManager *_handle;
 };
 
 #endif // SETTINGSDIALOG_H

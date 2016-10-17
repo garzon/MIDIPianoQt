@@ -21,19 +21,19 @@ FORMS += \
 
 HEADERS += \
     MIDIPianoQt.h \
-    myMIDI.h \
     SettingsDialog.h \
     visualizationdialog.h \
     midifilereader.h \
     midicontroller.h \
-    midiopenglwidget.h
+    midiopenglwidget.h \
+    MidiIOManager.h
 
 SOURCES += \
     main.cpp \
     MIDIPianoQt.cpp \
-    myMIDI.cpp \
     SettingsDialog.cpp \
     visualizationdialog.cpp \
     midifilereader.cpp \
     midicontroller.cpp \
-    midiopenglwidget.cpp
+    midiopenglwidget.cpp \
+    MidiIOManager.cpp

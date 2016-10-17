@@ -86,12 +86,12 @@ void MIDIPianoQt::setupButtons(int minIndex,int maxIndex){
 	this->resize(tmp.x()+tmp.width()+windowPadding,tmp.y()+heightWhite+windowPadding);
 }
 
-void MIDIPianoQt::playNote(int note,int volume){
+void MIDIPianoQt::playNote(int note, int volume, int channel){
 	if(note>=_minIndex)
 		if(note<=_maxIndex)
 			buttons[note]->setStyleSheet(pressedStyleString);
 	playedNotes.insert(note);
-	midiPointer->sendMsg(volume,note,9);
+    midiPointer->sendMsg(volume, note, 9, channel);
 }
 
 void MIDIPianoQt::clearNote(int note){
@@ -114,7 +114,7 @@ void MIDIPianoQt::stopAll(){
 	playedNotes.clear();
 }
 
-void MIDIPianoQt::doPressed(int index,int vol){
+void MIDIPianoQt::doPressed(int index,int vol,int channel){
 	if(vol==-1)
 		playNote(index);
 	else playNote(index,vol);
@@ -169,8 +169,8 @@ MIDIPianoQt::MIDIPianoQt(QWidget *parent)
 	connect(&_MIDIPianoQt::caller,SIGNAL(released(int)),this,SLOT(doReleased(int)));
 
 	try{
-		midiPointer=new myMIDI(&_MIDIPianoQt::caller.midiInCallback);
-	}catch(myMIDI::midiOutError){
+        midiPointer = new MidiIOManager(&_MIDIPianoQt::caller.midiInCallback);
+    } catch(MidiIOManager::midiOutError) {
 		QMessageBox::warning(0,"Error","Cannot open midi output device!",QMessageBox::StandardButton::Close);
 		midiPointer=NULL;
 		// this->~MIDIPianoQt();
