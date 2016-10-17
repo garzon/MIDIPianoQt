@@ -119,7 +119,7 @@ class MidiFileReader {
         }
 
         std::string read(unsigned long long length) {
-            assert(length <= n-p);
+            if(length+p > n) throw "Stream::read - not in valid range.";
             std::string res = rawData.substr(p, length);
             if(buffer != NULL)
                 (*buffer) += res;

@@ -213,7 +213,11 @@ void MidiFileReader::load(MidiData &midiData) {
     std::string id;
     std::string tmpData;
 
-    readChunk(stream, id, tmpData);
+    try {
+        readChunk(stream, id, tmpData);
+    } catch(const char* ex) {
+        throw "MidiFileReader::load() - Not a valid MIDI file.";
+    }
     if(id != "MThd" || tmpData.length() != 6) {
         throw "MidiFileReader::load() - Not a valid MIDI file.";
     }
@@ -223,19 +227,27 @@ void MidiFileReader::load(MidiData &midiData) {
     result.trackCount = headerStream.readInt16();
     result.ticksPerBeat = headerStream.readInt16();
     if(result.ticksPerBeat & 0x8000) {
-        throw "Expressing time division in SMTPE frames is not supported yet";
+        throw "This kind of midi file is not supported yet.";
     }
 
     tracks.clear();
     tracks.resize(result.trackCount);
     for(int i=0; i<result.trackCount; i++) {
-        readChunk(stream, id, tmpData);
+        try {
+            readChunk(stream, id, tmpData);
+        } catch(const char *ex) {
+            throw "MidiFileReader::load() - Midi file corrupted.";
+        }
         if(id != "MTrk") {
-            throw "MidiFileReader::load() - Expected MTrk not found.";
+            throw "MidiFileReader::load() - Expected MTrk Tag not found.";
         }
         Stream trackStream(tmpData);
         while(trackStream.length()) {
-            tracks[i].emplace_back(readEvent(trackStream));
+            try {
+                tracks[i].emplace_back(readEvent(trackStream));
+            } catch(const char *ex) {
+                throw "MidiFileReader::load() - Midi file corrupted. Fail to parse midi event.";
+            }
         }
     }
 

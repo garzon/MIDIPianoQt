@@ -24,10 +24,11 @@ void MIDIPianoQt::actionProcessor(QAction *a){
 		showConfig();
     }
     if(a == ui.actionOpenFile) {
-        QString fileName = QFileDialog::getOpenFileName(this, tr("Open Midi File"), QString(""), tr("Midi Files (*.mid;*.midi)"));
-        if(fileName.size()) {
-            (new VisualizationDialog(fileName))->show();
-        }
+        //QString fileName = QFileDialog::getOpenFileName(this, tr("Open Midi File"), QString(""), tr("Midi Files (*.mid;*.midi)"));
+        //if(fileName.size()) {
+            VisualizationDialog *dialog = (new VisualizationDialog(this));//->loadMidiFile(fileName);
+            if(dialog) dialog->show();
+        //}
     }
 }
 

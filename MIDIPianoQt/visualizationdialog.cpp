@@ -1,25 +1,46 @@
 #include "visualizationdialog.h"
 #include "ui_visualizationdialog.h"
 
-VisualizationDialog::VisualizationDialog(QString midiFilePath, QWidget *parent) :
+VisualizationDialog::VisualizationDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::VisualizationDialog),
-    midiData()
+    midiData(),
+    controller(NULL)
 {
     ui->setupUi(this);
+    //QTimer *timer = new QTimer(this);
+    //connect(timer, SIGNAL(timeout()), this, SLOT(ui->openGLWidget->update()));
+    //timer->start(10);
+}
+
+VisualizationDialog *VisualizationDialog::loadMidiFile(QString midiFilePath) {
+    if(controller) throw "VisualizationDialog::loadMidiFile - Midi file is already loaded.";
+
     MidiFileReader fileReader(midiFilePath.toLocal8Bit());
     try {
         fileReader.load(midiData);
     } catch(const char* ex) {
         QMessageBox::warning(this, QString("Error - Cannot open midi file"), QString::fromStdString(ex));
-        midiData.header.trackCount = 0;
+        close();
+        return NULL;
     }
 
     controller = new MidiController(midiData);
+    return this;
 }
 
 VisualizationDialog::~VisualizationDialog()
 {
-    delete controller;
+    if(controller) delete controller;
     delete ui;
+}
+
+void VisualizationDialog::on_pushButton_clicked()
+{
+    ui->openGLWidget->update();
+}
+
+void VisualizationDialog::on_btnSwitchView_clicked()
+{
+    ui->openGLWidget->switchView();
 }

@@ -25,7 +25,8 @@ HEADERS += \
     SettingsDialog.h \
     visualizationdialog.h \
     midifilereader.h \
-    midicontroller.h
+    midicontroller.h \
+    midiopenglwidget.h
 
 SOURCES += \
     main.cpp \
@@ -34,4 +35,5 @@ SOURCES += \
     SettingsDialog.cpp \
     visualizationdialog.cpp \
     midifilereader.cpp \
-    midicontroller.cpp
+    midicontroller.cpp \
+    midiopenglwidget.cpp
