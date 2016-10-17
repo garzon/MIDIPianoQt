@@ -216,10 +216,11 @@ void MidiOpenGLWidget::paintGL() {
     if(!is2dView) {
         m_proj.perspective(18.0f, GLfloat(width()) / height(), 0.01f, 100.0f);
         m_world.lookAt(
-            QVector3D(4,nowY+5,maxZ+1),
+            QVector3D(4,nowY+5,maxZ+2),
             QVector3D(0,nowY+1,0),
             QVector3D(0,0,1)
         );
+        m_world.scale(-1,1,1);
     } else {
         m_world.translate(0, -nowY-1, 0);
     }
@@ -244,13 +245,13 @@ void MidiOpenGLWidget::paintGL() {
         1, nowY, -maxZ,
         -1, nowY, -maxZ,
     };
-    drawDynamics(planeVertexs, QVector4D(1,1,1,0.3));
+    drawDynamics(planeVertexs, QVector4D(1,1,1,0.3f));
 
     // -------------------  draw keyboard
     const GLfloat zDown = -0.25;
     const GLfloat zUp = 0.25;
     const GLfloat alpha = 0.5;
-    const GLfloat eps = 0.001;
+    const GLfloat eps = 0.001f;
 
     // draw white keys
     drawDynamicsBegin(planeVertexs);

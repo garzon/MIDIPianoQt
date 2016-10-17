@@ -54,10 +54,10 @@ protected:
 
     QOpenGLShaderProgram program, planeProgram;
     QOpenGLVertexArrayObject m_vao;
-    QOpenGLBuffer posVBO, colorVBO, planeVBO, planeColorVBO;
+    QOpenGLBuffer posVBO, colorVBO, planeVBO;
     int m_projMatrixLoc;
     int m_mvMatrixLoc;
-    int planeProjMatrixLoc, planeMvMatrixLoc, planeColorLoc;
+    int planeProjMatrixLoc, planeMvMatrixLoc;
 
     QMatrix4x4 m_proj;
     QMatrix4x4 m_world;
