@@ -24,13 +24,20 @@ VisualizationDialog *VisualizationDialog::loadMidiFile(QString midiFilePath) {
     }
 
     ui->openGLWidget->loadMidiData(midiData);
+    ui->openGLWidget->setUpdateFrameCallback([this]() {
+        unsigned long time = this->controller->playTime();
+        if(!this->controller->isPaused())
+            this->ui->horizontalSlider->setValue(time * 100 / this->midiData.totalTime);
+        time /= 1000;
+        this->ui->lblPlayTime->setText(QString().sprintf("%02d:%02d", time / 60, time % 60));
+    });
     controller = new MidiController(midiData, ui->openGLWidget, _parent, this);
     return this;
 }
 
 VisualizationDialog::~VisualizationDialog()
 {
-    // if(controller) delete controller; QObject will handle this
+    if(controller) controller->deleteLater();
     delete ui;
 }
 
@@ -47,4 +54,26 @@ void VisualizationDialog::on_btnSwitchView_clicked()
 void VisualizationDialog::on_pushButton_2_clicked()
 {
     controller->pause();
+}
+
+void VisualizationDialog::on_btnRewind_clicked()
+{
+    controller->jumpTo();
+}
+
+void VisualizationDialog::on_horizontalSlider_sliderMoved(int position)
+{
+
+}
+
+void VisualizationDialog::on_horizontalSlider_sliderPressed()
+{
+    isJustPause = controller->isPaused();
+    controller->pause();
+}
+
+void VisualizationDialog::on_horizontalSlider_sliderReleased()
+{
+    controller->jumpTo(midiData.totalTime * ui->horizontalSlider->value() / 100);
+    if(!isJustPause) controller->play();
 }

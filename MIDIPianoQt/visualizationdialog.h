@@ -30,9 +30,18 @@ private slots:
 
     void on_pushButton_2_clicked();
 
+    void on_btnRewind_clicked();
+
+    void on_horizontalSlider_sliderMoved(int position);
+
+    void on_horizontalSlider_sliderPressed();
+
+    void on_horizontalSlider_sliderReleased();
+
 private:
     QMainWindow *_parent;
     Ui::VisualizationDialog *ui;
+    bool isJustPause;
 };
 
 #endif // VISUALIZATIONDIALOG_H

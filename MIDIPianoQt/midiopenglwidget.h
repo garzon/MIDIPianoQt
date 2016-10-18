@@ -1,6 +1,8 @@
 #ifndef MIDIOPENGLWIDGET_H
 #define MIDIOPENGLWIDGET_H
 
+#include <functional>
+
 #include <QTimer>
 #include <QTime>
 
@@ -11,7 +13,7 @@ class MidiOpenGLWidget : public OpenGLWidget {
     Q_OBJECT
 public:
     MidiOpenGLWidget(QWidget *parent = 0):
-        OpenGLWidget(parent)
+        OpenGLWidget(parent), callback([](){})
     {}
 
     void switchView();
@@ -27,6 +29,10 @@ public:
         isPaused = true;
     }
 
+    void setUpdateFrameCallback(std::function<void()> _callback) {
+        callback = _callback;
+    }
+
     bool isPaused;
 protected:
     unsigned long totalTime;
@@ -36,6 +42,8 @@ protected:
 
     void resizeGL(int w, int h);
     void paintGL();
+
+    std::function<void()> callback;
 
     QTime lastEventTimer;
     bool is2dView;

@@ -1,15 +1,18 @@
 #ifndef MIDIPIANOQT_H
 #define MIDIPIANOQT_H
 
-#include <QtWidgets/QMainWindow>
-#include <QtWidgets/qpushbutton.h>
-#include <qmessagebox.h>
-#include <QFileDialog>
-#include "SettingsDialog.h"
-#include "ui_MIDIPianoQt.h"
-#include "MidiIOManager.h"
-#include <set>
+#include <unordered_set>
+#include <mutex>
 
+#include <QMainWindow>
+#include <QPushButton>
+#include <QMessageBox>
+#include <QFileDialog>
+
+#include "ui_MIDIPianoQt.h"
+
+#include "SettingsDialog.h"
+#include "MidiIOManager.h"
 #include "visualizationdialog.h"
 
 
@@ -41,14 +44,13 @@ public:
     void playNote(int note, int volume=100, int channel=0);
 	void clearNote(int note);
     void stopNote(int note, int channel = 0);
-	void stopAll();
 	bool isSubstained;
 
 public slots:
     // doX()s
     void doPressed(int index, int vol = -1, int channel = 0);
-    void doReleased(int index, int channel = 0);
-
+    void doReleased(int index, int channel = 0, bool _isSubstained = true);
+    void stopAll();
 
 private slots:
     // in buttonX()s: get index and forward to doX()
@@ -65,7 +67,10 @@ private:
     MidiIOManager *midiPointer;
 	void showConfig();
 	void keyPressEvent(QKeyEvent *);
-	std::set<int> playedNotes;
+
+    std::unordered_set<int> playedNotes;
+
+    std::mutex noteSetMutex;
 };
 
 class MIDICallback:public QObject{
@@ -74,7 +79,7 @@ public:
 	std::function<void(long,long,long,long)> midiInCallback;
 signals:
 	void pressed(int note,int vol);
-	void released(int note);
+    void released(int note);
 };
 
 #endif // MIDIPIANOQT_H

@@ -86,33 +86,44 @@ void MIDIPianoQt::setupButtons(int minIndex,int maxIndex){
 	this->resize(tmp.x()+tmp.width()+windowPadding,tmp.y()+heightWhite+windowPadding);
 }
 
+#define ENCODE_NOTE_CHANNEL(note, channel) ((note << 8) | (channel))
+#define DECODE_NOTE_CHANNEL(v, note, channel) note = (((unsigned int)(v) & 0xFF00) >> 8); channel = (v & 0xFF)
+
 void MIDIPianoQt::playNote(int note, int volume, int channel){
 	if(note>=_minIndex)
 		if(note<=_maxIndex)
 			buttons[note]->setStyleSheet(pressedStyleString);
-	playedNotes.insert(note);
+
+    noteSetMutex.lock();
+    playedNotes.emplace(ENCODE_NOTE_CHANNEL(note, channel));
+    noteSetMutex.unlock();
+
     midiPointer->sendMsg(volume, note, 9, channel);
 }
 
-void MIDIPianoQt::clearNote(int note){
+void MIDIPianoQt::clearNote(int note) {
 	if(note>=_minIndex)
 		if(note<=_maxIndex)
 			buttons[note]->setStyleSheet(defaultStyleString[isWhite(note)]);
 }
 
 void MIDIPianoQt::stopNote(int note, int channel){
-	clearNote(note);
-	playedNotes.erase(note);
+    clearNote(note);
+    noteSetMutex.lock();
+    playedNotes.erase(ENCODE_NOTE_CHANNEL(note, channel));
+    noteSetMutex.unlock();
     midiPointer->sendMsg(0, note, 0x8, channel);
 }
 
 void MIDIPianoQt::stopAll(){
-	std::set<int>::iterator p;
-	for (p = playedNotes.begin(); p != playedNotes.end();p++){
-		clearNote(*p);
-		midiPointer->sendMsg(0, *p, 8);
+    noteSetMutex.lock();
+    for(int p: playedNotes){
+        DECODE_NOTE_CHANNEL(p, unsigned int note, unsigned int channel);
+        clearNote(note);
+        midiPointer->sendMsg(0, note, 8, channel);
 	}
 	playedNotes.clear();
+    noteSetMutex.unlock();
 }
 
 void MIDIPianoQt::doPressed(int index, int vol, int channel){
@@ -121,8 +132,8 @@ void MIDIPianoQt::doPressed(int index, int vol, int channel){
     else playNote(index, vol, channel);
 }
 
-void MIDIPianoQt::doReleased(int index, int channel){
-	if(isSubstained){
+void MIDIPianoQt::doReleased(int index, int channel, bool _isSubstained){
+    if(_isSubstained && isSubstained){
 		clearNote(index);
 		return;
 	}
@@ -145,9 +156,7 @@ void MIDIPianoQt::keyPressEvent(QKeyEvent *e){
 	}
 }
 
-namespace _MIDIPianoQt{
-	MIDICallback caller;
-};
+static MIDICallback caller;
 
 MIDIPianoQt::MIDIPianoQt(QWidget *parent)
 	: QMainWindow(parent){
@@ -155,22 +164,22 @@ MIDIPianoQt::MIDIPianoQt(QWidget *parent)
 	ui.setupUi(this);
 	_minIndex=0;
 	_maxIndex=-1;
-	isSubstained=true;
+    isSubstained = false;
 
-	_MIDIPianoQt::caller.midiInCallback=[](long vol,long note,long evt,long channel){
+    caller.midiInCallback = [](long vol,long note,long evt,long channel){
 		if(evt==9){
-			emit _MIDIPianoQt::caller.pressed(note,vol);
+            emit caller.pressed(note,vol);
 		}
 		if(evt==8){
-			emit _MIDIPianoQt::caller.released(note);
+            emit caller.released(note);
 		}
 	};
 
-	connect(&_MIDIPianoQt::caller,SIGNAL(pressed(int,int)),this,SLOT(doPressed(int,int)));
-	connect(&_MIDIPianoQt::caller,SIGNAL(released(int)),this,SLOT(doReleased(int)));
+    connect(&caller, SIGNAL(pressed(int,int)),this,SLOT(doPressed(int,int)));
+    connect(&caller, SIGNAL(released(int)),this,SLOT(doReleased(int)));
 
-	try{
-        midiPointer = new MidiIOManager(&_MIDIPianoQt::caller.midiInCallback);
+    try {
+        midiPointer = new MidiIOManager(&(caller.midiInCallback));
     } catch(MidiIOManager::midiOutError) {
 		QMessageBox::warning(0,"Error","Cannot open midi output device!",QMessageBox::StandardButton::Close);
 		midiPointer=NULL;
@@ -185,10 +194,10 @@ MIDIPianoQt::MIDIPianoQt(QWidget *parent)
 }
 
 void MIDIPianoQt::showConfig(){
-	configDlg=new SettingsDialog(midiPointer);
+    configDlg = new SettingsDialog(midiPointer);
 	configDlg->show();
 }
 
 MIDIPianoQt::~MIDIPianoQt(){
-	if(midiPointer!=NULL) delete midiPointer;
+    if(midiPointer != NULL) delete midiPointer;
 }

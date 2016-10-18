@@ -17,9 +17,6 @@ public:
     {}
 
     static QVector4D rgba(int r, int g, int b, GLfloat a=1.0) {
-        r = rand()%256;
-        g = rand()%256;
-        b = rand()%256;
         return QVector4D(r/255.0, g/255.0, b/255.0, a);
     }
 

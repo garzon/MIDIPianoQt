@@ -27,6 +27,7 @@ class MidiController: public QObject {
     std::mutex playLoopMutex;
 
     void playEvent(MidiEvent &event);
+    void updateView();
 
 private slots:
     void playLoop();
@@ -36,10 +37,15 @@ public:
 
     void play();
     void pause();
+    void jumpTo(unsigned long time = 0);
+
+    bool isPaused() const { return isPause; }
+    unsigned long playTime() const { return now; }
 
 signals:
+    void mute();
     void pressed(int index, int vol = -1, int channel = 0);
-    void released(int index, int channel = 0);
+    void released(int index, int channel = 0, bool isSubstained = true);
 };
 
 #endif // MIDICONTROLLER_H

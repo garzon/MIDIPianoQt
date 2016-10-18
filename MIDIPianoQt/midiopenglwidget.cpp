@@ -26,7 +26,26 @@ static GLfloat linearMap(GLfloat v, GLfloat oMin, GLfloat oMax, GLfloat nMin, GL
 static const GLfloat whiteW = 16.0, blackW = 11.0;
 static const int keyStart = 21, keyEnd = keyStart + 87;
 static const GLfloat whiteNum = 45.0, blackNum = 33.0;
-static const GLfloat maxZ = 2;
+static const GLfloat maxZ = 1.5;
+
+static const QVector4D beautifulColors[16]{
+    OpenGLWidget::rgba(68,206,246, 1),
+    OpenGLWidget::rgba(37,248,203, 1),
+    OpenGLWidget::rgba(255,137,54, 1),
+    OpenGLWidget::rgba(250,255,114, 1),
+    OpenGLWidget::rgba(195,39,43, 1),
+    OpenGLWidget::rgba(255,179,167, 1),
+    OpenGLWidget::rgba(255,51,0, 1),
+    OpenGLWidget::rgba(64,222,90, 1),
+    OpenGLWidget::rgba(75,92,196,1),
+    OpenGLWidget::rgba(48,223,243,1),
+    OpenGLWidget::rgba(141,75,187, 1),
+    OpenGLWidget::rgba(163,217,0, 1),
+    OpenGLWidget::rgba(137,108,57, 1),
+    OpenGLWidget:: rgba(255,0,151, 1),
+    OpenGLWidget::rgba(242,12,0, 1),
+    OpenGLWidget::rgba(167,142,68, 1),
+};
 
 void MidiOpenGLWidget::addMidiNoteBar(unsigned long absTime, unsigned long lastToTime, int note, int channel) {
     if(note < keyStart || note > keyEnd) return;
@@ -40,7 +59,7 @@ void MidiOpenGLWidget::addMidiNoteBar(unsigned long absTime, unsigned long lastT
         QVector3D(sx+nw, convertMsToPx(absTime), nChan),
         QVector3D(sx, convertMsToPx(lastToTime), nChan),
         QVector3D(sx, convertMsToPx(absTime), nChan+nh),
-        rgba(128,128,128)
+        beautifulColors[channel]
     );
 }
 
@@ -75,13 +94,13 @@ void MidiOpenGLWidget::paintGL() {
     if(!is2dView) {
         mProj.perspective(18.0f, GLfloat(width()) / height(), 0.01f, 100.0f);
         mWorld.lookAt(
-            QVector3D(4,nowY+5,maxZ+2),
-            QVector3D(0,nowY+1,0),
+            QVector3D(4,nowY+5,maxZ+3),
+            QVector3D(0,nowY+1.4,0+0.8),
             QVector3D(0,0,1)
         );
         mWorld.scale(-1,1,1);
     } else {
-        mWorld.translate(0, -nowY-1, 0);
+        mWorld.translate(0, -nowY-1, 0.1);
     }
 
     // openGL settings
@@ -137,6 +156,8 @@ void MidiOpenGLWidget::paintGL() {
         );
     }
     drawDynamicsEnd(QVector4D(0,0,0,alpha));
+
+    callback();
 }
 
 void MidiOpenGLWidget::switchView() {

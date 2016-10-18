@@ -86,13 +86,14 @@ struct MidiData {
     MidiHeader header;
     std::vector<std::vector<MidiEvent>> tracks;
     std::vector<MidiEvent> setTempoEvent;
+
     unsigned long totalTime;
     unsigned long totalTicks;
+
     void refresh() {
         calcLastTimeOfEvents();
         calcAbsoluteTime();
     }
-
 
     class iterator {
         std::vector<size_t> currentEventAtTrackId;
@@ -183,9 +184,45 @@ struct MidiData {
         return res;
     }
 
+    iterator find(unsigned long time) {
+        iterator res(this);
+        res.absTicks = 1999999999;
+        for(int i=0; i<tracks.size(); i++) {
+            long idx = binarySearch(time, tracks[i], 0, tracks[i].size()-1);
+            if(idx == -1) idx = tracks[i].size();
+            else {
+                unsigned long absTicks = tracks[i][idx].absoluteTicks;
+                if(absTicks < res.absTicks)
+                    res.absTicks = absTicks;
+            }
+            res.currentEventAtTrackId[i] = idx;
+        }
+        return res;
+    }
+
 private:
     void calcLastTimeOfEvents();
     void calcAbsoluteTime();
+
+    // find the smallest event that event.time >= v
+    // return -1 means that no next evt
+    long binarySearch(unsigned long v, std::vector<MidiEvent> &track, size_t l, size_t r) {
+#define CRITERIA(idx) (track[idx].absoluteTime >= v)
+        if(l == r) {
+            if(CRITERIA(l)) return l;
+            else return -1;
+        }
+        if(l == r-1) {
+            if(CRITERIA(l)) return l;
+            else return CRITERIA(r) ? r : -1;
+        }
+        size_t m = (l+r) >> 1;
+        if(CRITERIA(m)) {
+            long tmp = binarySearch(v, track, l, m-1);
+            return tmp == -1 ? m : tmp;
+        } else return binarySearch(v, track, m+1, r);
+#undef CRITERIA
+    }
 };
 
 class MidiFileReader {
