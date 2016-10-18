@@ -14,14 +14,14 @@ public:
         OpenGLWidget(parent)
     {}
 
-    void addMidiNoteBar(unsigned long absTime, unsigned long lastToTime, int note, int channel);
-
     void switchView();
     void loadMidiData(MidiData &midiData);
 
     double now;
 protected:
     unsigned long totalTime;
+
+    void addMidiNoteBar(unsigned long absTime, unsigned long lastToTime, int note, int channel);
 
     void resizeGL(int w, int h);
     void paintGL();

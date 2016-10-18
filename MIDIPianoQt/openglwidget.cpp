@@ -17,6 +17,8 @@ void OpenGLWidget::addTriangle(const QVector3D& p1, const QVector3D& p2, const Q
         EMPLACE_BACK_3((*outputPosVec), p1);
         EMPLACE_BACK_3((*outputPosVec), p2);
         EMPLACE_BACK_3((*outputPosVec), p3);
+    } else {
+        throw "OpenGLWidget - You should call Xbegin() functions first.";
     }
     if(outputColorVec) {
         EMPLACE_COLOR((*outputColorVec), color);
@@ -139,17 +141,19 @@ void OpenGLWidget::paintGL() {
 }
 
 void OpenGLWidget::drawDynamicsBegin(vector<GLfloat> &buffer) {
-    buffer.clear();
     outputPosVec = &buffer;
     outputColorVec = NULL;
 }
 
-void OpenGLWidget::drawDynamics(vector<GLfloat> &buffer, const QVector4D &color, GLenum mode) {
-    outputPosVec = NULL;
-    outputColorVec = NULL;
+void OpenGLWidget::drawDynamicsEnd(const QVector4D &color, GLenum mode) {
+    if(!outputPosVec) throw "OpenGLWidget::drawDynamicsEnd() - should call drawDynamicsBegin first.";
+    vector<GLfloat> &buffer(*outputPosVec);
     size_t bufferSize = buffer.size();
     planeVBO.allocate(buffer.data(), bufferSize*sizeof(GLfloat));
     planeVBO.bind();
     planeProgram.setUniformValue("color", color);
     glDrawArrays(mode, 0, bufferSize/3);
+    buffer.clear();
+    outputPosVec = NULL;
+    outputColorVec = NULL;
 }

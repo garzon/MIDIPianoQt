@@ -50,21 +50,16 @@ void MidiOpenGLWidget::addMidiNoteBar(unsigned long absTime, unsigned long lastT
 void MidiOpenGLWidget::loadMidiData(MidiData &midiData) {
     totalTime = midiData.totalTime;
 
+    // add the static vertex(midi notes)
     addStaticVertexBegin();
-
-    auto end = midiData.end();
-    int counter = 0;
-    for(auto p=midiData.begin(); p!=end; ++p) {
-        MidiEvent &event = *p;
+    for(auto &event: midiData) {
         if(event.subtype == MidiEvent::NOTE_ON && event.lastEventIdx != -1) {
             addMidiNoteBar(event.absoluteTime, midiData.tracks[event.trackId][event.lastEventIdx].absoluteTime, event.noteNumber, event.channel);
         }
-        counter ++;
     }
-
     addStaticVertexEnd();
 
-    // ---------------------------------------------- auto refresher
+    // auto refresh each frame(100fps)
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     timer->start(10);
@@ -74,16 +69,9 @@ void MidiOpenGLWidget::loadMidiData(MidiData &midiData) {
 void MidiOpenGLWidget::paintGL() {
     now = (fromStart.elapsed() % totalTime);
 
+    // set projection matrix and world matrix (move the camera)
     mProj.setToIdentity();
     mWorld.setToIdentity();
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
     if(!is2dView) {
         mProj.perspective(18.0f, GLfloat(width()) / height(), 0.01f, 100.0f);
         mWorld.lookAt(
@@ -96,8 +84,19 @@ void MidiOpenGLWidget::paintGL() {
         mWorld.translate(0, -nowY-1, 0);
     }
 
+    // openGL settings
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // call parent's function to draw statics
     OpenGLWidget::paintGL();
 
+    // ------------------ draw dynamics --------------------
+
+    // draw plane
     vector<GLfloat> planeVertexs {
         -1, nowY, -maxZ,
         -1, nowY, maxZ,
@@ -107,9 +106,10 @@ void MidiOpenGLWidget::paintGL() {
         1, nowY, -maxZ,
         -1, nowY, -maxZ,
     };
-    drawDynamics(planeVertexs, QVector4D(1,1,1,0.3f));
+    drawDynamicsBegin(planeVertexs);
+    drawDynamicsEnd(QVector4D(1,1,1,0.3f));
 
-    // -------------------  draw keyboard
+    // draw the "keyboard"
     const GLfloat zDown = -0.25;
     const GLfloat zUp = 0.25;
     const GLfloat alpha = 0.5;
@@ -123,7 +123,7 @@ void MidiOpenGLWidget::paintGL() {
         QVector3D(-1.0, nowY+eps, zUp),
         DUMMY_COLOR
     );
-    drawDynamics(planeVertexs, QVector4D(1,1,1,1));
+    drawDynamicsEnd(QVector4D(1,1,1,1));
 
     // draw black keys
     drawDynamicsBegin(planeVertexs);
@@ -138,12 +138,11 @@ void MidiOpenGLWidget::paintGL() {
             DUMMY_COLOR
         );
     }
-    drawDynamics(planeVertexs, QVector4D(0,0,0,alpha));
+    drawDynamicsEnd(QVector4D(0,0,0,alpha));
 }
 
 void MidiOpenGLWidget::switchView() {
     is2dView = !is2dView;
-    resizeGL(width(), height());
 }
 
 void MidiOpenGLWidget::resizeGL(int w, int h) {
