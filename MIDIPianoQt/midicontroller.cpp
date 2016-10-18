@@ -62,11 +62,17 @@ void MidiController::playEvent(MidiEvent &event) {
 }
 
 void MidiController::pause() {
+    if(isPause) return;
     isPause = true;
     v->isPaused = true;
+    playLoopMutex.lock();
+    now += timeSincePlay.elapsed();
+    v->setTime(now);
+    playLoopMutex.unlock();
 }
 
 void MidiController::play() {
+    if(!isPause) return;
     timeSincePlay.restart();
     isPause = false;
     v->isPaused = false;
