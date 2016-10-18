@@ -12,7 +12,6 @@ typedef union{
 
 static MidiIOManager *_ioManagerInstance;
 
-
 void CALLBACK MidiIOManager::midiCallback(UINT uMsg, DWORD dwInstance, DWORD dwParam1, DWORD dwParam2){
     //qDebug() << QString().sprintf("%x %x %x %x", uMsg, dwInstance, dwParam1, dwParam2);
     if(uMsg == MIM_DATA){

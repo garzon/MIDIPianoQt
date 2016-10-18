@@ -43,11 +43,17 @@ public:
 	void stopNote(int note);
 	void stopAll();
 	bool isSubstained;
+
 private slots:
+    // doX()s
     void doPressed(int index, int vol = -1, int channel = 0);
 	void doReleased(int index);
+
+    // in buttonX()s: get index and forward to doX()
 	void buttonPressed();
 	void buttonReleased();
+
+    // menu related
 	void actionProcessor(QAction *);
 private:
 	Ui::MIDIPianoQtClass ui;

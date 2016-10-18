@@ -26,7 +26,8 @@ HEADERS += \
     midifilereader.h \
     midicontroller.h \
     midiopenglwidget.h \
-    MidiIOManager.h
+    MidiIOManager.h \
+    openglwidget.h
 
 SOURCES += \
     main.cpp \
@@ -36,4 +37,5 @@ SOURCES += \
     midifilereader.cpp \
     midicontroller.cpp \
     midiopenglwidget.cpp \
-    MidiIOManager.cpp
+    MidiIOManager.cpp \
+    openglwidget.cpp
