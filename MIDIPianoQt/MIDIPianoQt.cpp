@@ -99,10 +99,11 @@ void MIDIPianoQt::clearNote(int note){
 		if(note<=_maxIndex)
 			buttons[note]->setStyleSheet(defaultStyleString[isWhite(note)]);
 }
-void MIDIPianoQt::stopNote(int note){
+
+void MIDIPianoQt::stopNote(int note, int channel){
 	clearNote(note);
 	playedNotes.erase(note);
-	midiPointer->sendMsg(0,note,8);
+    midiPointer->sendMsg(0, note, 0x8, channel);
 }
 
 void MIDIPianoQt::stopAll(){
@@ -114,18 +115,18 @@ void MIDIPianoQt::stopAll(){
 	playedNotes.clear();
 }
 
-void MIDIPianoQt::doPressed(int index,int vol,int channel){
+void MIDIPianoQt::doPressed(int index, int vol, int channel){
 	if(vol==-1)
 		playNote(index);
-	else playNote(index,vol);
+    else playNote(index, vol, channel);
 }
 
-void MIDIPianoQt::doReleased(int index){
+void MIDIPianoQt::doReleased(int index, int channel){
 	if(isSubstained){
 		clearNote(index);
 		return;
 	}
-	stopNote(index);
+    stopNote(index, channel);
 }
 
 void MIDIPianoQt::buttonPressed(){

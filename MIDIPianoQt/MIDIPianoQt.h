@@ -40,15 +40,17 @@ public:
 	void setupButtons(int minIndex,int maxIndex);
     void playNote(int note, int volume=100, int channel=0);
 	void clearNote(int note);
-	void stopNote(int note);
+    void stopNote(int note, int channel = 0);
 	void stopAll();
 	bool isSubstained;
 
-private slots:
+public slots:
     // doX()s
     void doPressed(int index, int vol = -1, int channel = 0);
-	void doReleased(int index);
+    void doReleased(int index, int channel = 0);
 
+
+private slots:
     // in buttonX()s: get index and forward to doX()
 	void buttonPressed();
 	void buttonReleased();

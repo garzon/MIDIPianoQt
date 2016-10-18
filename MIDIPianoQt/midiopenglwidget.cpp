@@ -6,9 +6,6 @@ using namespace std;
 
 // 1px/3000ms
 #define convertMsToPx(ms) (ms*1.0/3000.0)
-#define nowY ((GLfloat)(convertMsToPx(now)))
-
-static const QVector4D DUMMY_COLOR(0,0,0,1);
 
 static inline bool isWhite(int note){
     note %= 12;
@@ -63,11 +60,14 @@ void MidiOpenGLWidget::loadMidiData(MidiData &midiData) {
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     timer->start(10);
-    fromStart.start();
+    lastEventTimer.start();
 }
 
 void MidiOpenGLWidget::paintGL() {
-    now = (fromStart.elapsed() % totalTime);
+    unsigned long currFrameTime = now + lastEventTimer.elapsed();
+    if(currFrameTime > totalTime) currFrameTime = totalTime;
+    if(isPaused) currFrameTime = now;
+    const GLfloat nowY = ((GLfloat)(convertMsToPx(currFrameTime)));
 
     // set projection matrix and world matrix (move the camera)
     mProj.setToIdentity();
@@ -120,8 +120,7 @@ void MidiOpenGLWidget::paintGL() {
     addRect(
         QVector3D(1.0, nowY+eps, zUp),
         QVector3D(1.0, nowY+eps, zDown),
-        QVector3D(-1.0, nowY+eps, zUp),
-        DUMMY_COLOR
+        QVector3D(-1.0, nowY+eps, zUp)
     );
     drawDynamicsEnd(QVector4D(1,1,1,1));
 
@@ -134,8 +133,7 @@ void MidiOpenGLWidget::paintGL() {
         addRect(
             QVector3D(sx, nowY+eps*2, zUp),
             QVector3D(sx, nowY+eps*2, zDown+0.125),
-            QVector3D(sx+nw, nowY+eps*2, zUp),
-            DUMMY_COLOR
+            QVector3D(sx+nw, nowY+eps*2, zUp)
         );
     }
     drawDynamicsEnd(QVector4D(0,0,0,alpha));

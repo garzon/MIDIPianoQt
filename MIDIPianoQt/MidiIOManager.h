@@ -22,6 +22,8 @@ public:
 	bool outputValid() const;
     MMRESULT sendMsg(unsigned char vol, unsigned char note, unsigned char evt, unsigned char channel=0) const;
     ~MidiIOManager();
+
+    static MidiIOManager *getInstance();
 };
 
 #endif

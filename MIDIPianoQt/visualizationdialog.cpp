@@ -1,8 +1,9 @@
 #include "visualizationdialog.h"
 #include "ui_visualizationdialog.h"
 
-VisualizationDialog::VisualizationDialog(QWidget *parent) :
+VisualizationDialog::VisualizationDialog(QMainWindow *parent) :
     QDialog(parent),
+    _parent(parent),
     ui(new Ui::VisualizationDialog),
     midiData(),
     controller(NULL)
@@ -22,23 +23,28 @@ VisualizationDialog *VisualizationDialog::loadMidiFile(QString midiFilePath) {
         return NULL;
     }
 
-    controller = new MidiController(midiData);
     ui->openGLWidget->loadMidiData(midiData);
+    controller = new MidiController(midiData, ui->openGLWidget, _parent, this);
     return this;
 }
 
 VisualizationDialog::~VisualizationDialog()
 {
-    if(controller) delete controller;
+    // if(controller) delete controller; QObject will handle this
     delete ui;
 }
 
 void VisualizationDialog::on_pushButton_clicked()
 {
-    ui->openGLWidget->update();
+    controller->play();
 }
 
 void VisualizationDialog::on_btnSwitchView_clicked()
 {
     ui->openGLWidget->switchView();
+}
+
+void VisualizationDialog::on_pushButton_2_clicked()
+{
+    controller->pause();
 }

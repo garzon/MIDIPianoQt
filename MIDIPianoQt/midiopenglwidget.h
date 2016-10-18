@@ -17,16 +17,27 @@ public:
     void switchView();
     void loadMidiData(MidiData &midiData);
 
-    double now;
+    void setTime(unsigned long actualTime) {
+        now = actualTime;
+        lastEventTimer.restart();
+    }
+
+    void pause(unsigned long actualTime) {
+        now = actualTime;
+        isPaused = true;
+    }
+
+    bool isPaused;
 protected:
     unsigned long totalTime;
+    double now;
 
     void addMidiNoteBar(unsigned long absTime, unsigned long lastToTime, int note, int channel);
 
     void resizeGL(int w, int h);
     void paintGL();
 
-    QTime fromStart;
+    QTime lastEventTimer;
     bool is2dView;
 };
 

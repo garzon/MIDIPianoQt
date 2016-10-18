@@ -1,6 +1,4 @@
 #include "MidiIOManager.h"
-//#include <cstdio>
-
 
 static bool _isCreated = false;
 static std::function<void(long,long,long,long)> *_myCallback;
@@ -11,6 +9,10 @@ typedef union{
 } functionPointer;
 
 static MidiIOManager *_ioManagerInstance;
+
+MidiIOManager *MidiIOManager::getInstance() {
+    return _ioManagerInstance;
+}
 
 void CALLBACK MidiIOManager::midiCallback(UINT uMsg, DWORD dwInstance, DWORD dwParam1, DWORD dwParam2){
     //qDebug() << QString().sprintf("%x %x %x %x", uMsg, dwInstance, dwParam1, dwParam2);

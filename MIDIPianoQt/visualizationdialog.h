@@ -18,7 +18,7 @@ class VisualizationDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit VisualizationDialog(QWidget *parent = 0);
+    explicit VisualizationDialog(QMainWindow *parent = 0);
     VisualizationDialog *loadMidiFile(QString midiFilePath);
     ~VisualizationDialog();
     MidiData midiData;
@@ -28,7 +28,10 @@ private slots:
 
     void on_btnSwitchView_clicked();
 
+    void on_pushButton_2_clicked();
+
 private:
+    QMainWindow *_parent;
     Ui::VisualizationDialog *ui;
 };
 
