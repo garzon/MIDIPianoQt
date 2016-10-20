@@ -25,7 +25,7 @@ protected:
     virtual void paintGL();
 
     void addTriangle(const QVector3D& p1, const QVector3D& p2, const QVector3D& p3, QVector4D color = QVector4D());
-    void addRect(const QVector3D &p, const QVector3D &pBottom, const QVector3D &pRight, QVector4D color = QVector4D());
+    void addRect(const QVector3D &p, const QVector3D &pBottom, const QVector3D &pRight, QVector4D color = QVector4D(), bool addBorder = true);
     void addQuad(const QVector3D& p, const QVector3D& px, const QVector3D& py, const QVector3D& pz, QVector4D color = QVector4D());
 
     void addStaticVertexBegin() {

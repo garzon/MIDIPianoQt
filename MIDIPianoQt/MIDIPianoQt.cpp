@@ -190,7 +190,7 @@ MIDIPianoQt::MIDIPianoQt(QWidget *parent)
 	if(!midiPointer->inputValid()){
         // QMessageBox::warning(0,"Warning","Cannot open midi input device!",QMessageBox::StandardButton::Ok);
     }
-    setupButtons(21,96);
+    setupButtons(21,21+87);
 }
 
 void MIDIPianoQt::showConfig(){

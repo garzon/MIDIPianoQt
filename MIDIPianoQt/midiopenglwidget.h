@@ -33,12 +33,19 @@ public:
         callback = _callback;
     }
 
+    static GLfloat calcNoteXCor(int noteNumber);
+
     bool isPaused;
 protected:
     unsigned long totalTime;
     double now;
 
     void addMidiNoteBar(unsigned long absTime, unsigned long lastToTime, int note, int channel);
+
+
+    void drawArrivalPlane();
+    void drawVerticalKeyboard();
+    void drawHorizontalKeyboard();
 
     void resizeGL(int w, int h);
     void paintGL();

@@ -6,10 +6,26 @@ using namespace std;
 #define EMPLACE_BACK_4(v, p) EMPLACE_BACK_3(v, p); v.emplace_back(p.w())
 #define EMPLACE_COLOR(v, c) EMPLACE_BACK_4(v, c);EMPLACE_BACK_4(v, c);EMPLACE_BACK_4(v, c)
 
-void OpenGLWidget::addRect(const QVector3D &p, const QVector3D &pBottom, const QVector3D &pRight, QVector4D color) {
+void OpenGLWidget::addRect(const QVector3D &p, const QVector3D &pBottom, const QVector3D &pRight, QVector4D color, bool addBorder) {
     QVector3D p_ = pBottom + pRight - p;
     addTriangle(p, pBottom, p_, color);
     addTriangle(p, p_, pRight, color);
+
+    if(!addBorder) return;
+
+    // add border lines
+    const GLfloat eps = 0.004f;
+    QVector3D pRightDir = (pRight - p).normalized() * eps;
+    QVector3D pBottomDir = (pBottom - p).normalized() * eps;
+    QVector3D outer_p = p - pRightDir - pBottomDir;
+    QVector3D outer_pRight = pRight + pRightDir - pBottomDir;
+    QVector3D outer_pBottom = pBottom + pBottomDir - pRightDir;
+    QVector3D outer_p_ = outer_pBottom + outer_pRight - outer_p;
+
+    addRect(outer_p, outer_pBottom, p - pBottomDir, QVector4D(0,0,0,1), false);
+    addRect(outer_p, outer_p + pBottomDir, outer_pRight, QVector4D(0,0,0,1), false);
+    addRect(pBottom, pBottom + pBottomDir, outer_p_ - pBottomDir, QVector4D(0,0,0,1), false);
+    addRect(pRight, p_, pRight + pRightDir, QVector4D(0,0,0,1), false);
 }
 
 void OpenGLWidget::addTriangle(const QVector3D& p1, const QVector3D& p2, const QVector3D& p3, QVector4D color) {
@@ -29,39 +45,12 @@ void OpenGLWidget::addQuad(const QVector3D& p, const QVector3D& px, const QVecto
     QVector3D pxpy = px + py - p;
     QVector3D pypz = py + pz - p;
     QVector3D pxpz = px + pz - p;
-    QVector3D p_ = pxpz + pypz - pz;
-
-    // bottom
-    // p -> px -> pxpy
-    // p -> pxpy -> py
-    addTriangle(p, px, pxpy, color);
-    addTriangle(p, pxpy, py, color);
-
-    // p -> pxpz -> px
-    // p -> pz -> pxpz
-    addTriangle(p, pxpz, px, color);
-    addTriangle(p, pz, pxpz, color);
-
-    // p -> py -> pypz
-    // p -> pypz -> pz
-    addTriangle(p, py, pypz, color);
-    addTriangle(p, pypz, pz, color);
-
-    // top
-    // p' -> pz -> pxpz
-    // p' -> pypz -> pz
-    addTriangle(p_, pz, pxpz, color);
-    addTriangle(p_, pypz, pz, color);
-
-    // px -> p' -> pxpz
-    // px -> pxpy -> p'
-    addTriangle(px, p_, pxpz, color);
-    addTriangle(px, pxpy, p_, color);
-
-    // pxpy -> py -> p'
-    // py -> pypz -> p'
-    addTriangle(pxpy, py, p_, color);
-    addTriangle(py, pypz, p_, color);
+    addRect(p, px, py, color);
+    addRect(p, pz, px, color);
+    addRect(p, pz, py, color);
+    addRect(py, pypz, pxpy, color);
+    addRect(px, pxpy, pxpz, color);
+    addRect(pz, pxpz, pypz, color);
 }
 
 void OpenGLWidget::initializeGL() {

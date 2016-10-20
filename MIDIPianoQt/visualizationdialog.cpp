@@ -58,6 +58,7 @@ void VisualizationDialog::on_pushButton_2_clicked()
 
 void VisualizationDialog::on_btnRewind_clicked()
 {
+    ui->horizontalSlider->setValue(0);
     controller->jumpTo();
 }
 

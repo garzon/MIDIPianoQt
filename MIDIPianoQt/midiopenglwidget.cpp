@@ -23,11 +23,6 @@ static GLfloat linearMap(GLfloat v, GLfloat oMin, GLfloat oMax, GLfloat nMin, GL
     return (v - oMin) / (oMax - oMin) * (nMax - nMin) + nMin;
 }
 
-static const GLfloat whiteW = 16.0, blackW = 11.0;
-static const int keyStart = 21, keyEnd = keyStart + 87;
-static const GLfloat whiteNum = 45.0, blackNum = 33.0;
-static const GLfloat maxZ = 1.5;
-
 static const QVector4D beautifulColors[16]{
     OpenGLWidget::rgba(68,206,246, 1),
     OpenGLWidget::rgba(37,248,203, 1),
@@ -42,16 +37,44 @@ static const QVector4D beautifulColors[16]{
     OpenGLWidget::rgba(141,75,187, 1),
     OpenGLWidget::rgba(163,217,0, 1),
     OpenGLWidget::rgba(137,108,57, 1),
-    OpenGLWidget:: rgba(255,0,151, 1),
+    OpenGLWidget::rgba(255,0,151, 1),
     OpenGLWidget::rgba(242,12,0, 1),
     OpenGLWidget::rgba(167,142,68, 1),
 };
 
+static const GLfloat whiteW = 16.0, blackW = 11.0, whiteH = 70.0, blackH = 50.0, padding = 1;
+static const GLfloat whiteNum = 45.0, blackNum = 33.0;
+static const int keyStart = 21, keyEnd = keyStart + 87;
+static const GLfloat nWhiteW = whiteW/(whiteW*whiteNum + padding * (keyEnd-keyStart))*2.0;
+static const GLfloat nBlackW = blackW/(whiteW*whiteNum + padding * (keyEnd-keyStart))*2.0;
+static const GLfloat nPadding = padding/(whiteW*whiteNum + padding * (keyEnd-keyStart))*2.0;
+static const GLfloat maxZ = 0.8;
+static const GLfloat maxOriginalX = padding * (keyEnd - keyStart) + whiteNum * whiteW;
+
+static const int whiteNumLeftInOctave[] = {
+    3, 4, 4, 5, 5, 7, 8, 8, 9, 0, 1, 1,
+};
+static const int blackNumLeftInOctave[] = {
+    1, 1, 2, 2, 3, 3, 3, 4, 4, 0, 0, 1,
+};
+
+
+GLfloat MidiOpenGLWidget::calcNoteXCor(int noteNumber) {
+    GLfloat x = 0;
+    x += padding * (noteNumber - keyStart);
+    int octaves = (noteNumber - keyStart) / 12;
+    int mods = noteNumber % 12;
+    x += (octaves * (9 * whiteW + 5 * blackW) +
+          whiteNumLeftInOctave[mods] * whiteW +
+          blackNumLeftInOctave[mods] * blackW) * 0.5;
+    return linearMap(x, 0, 810, -1, 1);
+}
+
+
 void MidiOpenGLWidget::addMidiNoteBar(unsigned long absTime, unsigned long lastToTime, int note, int channel) {
     if(note < keyStart || note > keyEnd) return;
-    GLfloat w = isWhite(note) ? whiteW : blackW;
-    GLfloat sx = linearMap(note, keyStart, keyEnd, -1.0, 1.0);
-    GLfloat nw = w/(whiteW*whiteNum)*2.0;
+    GLfloat nw = isWhite(note) ? nWhiteW : nBlackW;
+    GLfloat sx = calcNoteXCor(note);
     GLfloat nChan = ((GLfloat)((channel & 1) ? (-((channel+1) >> 1)) : (channel >> 1))) / 8.0 * maxZ;
     GLfloat nh = maxZ / 8.0 / 2.0;
     addQuad(
@@ -82,29 +105,37 @@ void MidiOpenGLWidget::loadMidiData(MidiData &midiData) {
     lastEventTimer.start();
 }
 
+static const GLfloat zDown = -0.2;
+static const GLfloat zUp = 0.2;
+static const GLfloat alpha = 1;
+static const GLfloat eps = 0.001f;
+static const GLfloat keyboardH = 0.3;
+
+GLfloat nowY;
+
 void MidiOpenGLWidget::paintGL() {
     unsigned long currFrameTime = now + lastEventTimer.elapsed();
     if(currFrameTime > totalTime) currFrameTime = totalTime;
     if(isPaused) currFrameTime = now;
-    const GLfloat nowY = ((GLfloat)(convertMsToPx(currFrameTime)));
+    nowY = ((GLfloat)(convertMsToPx(currFrameTime)));
 
     // set projection matrix and world matrix (move the camera)
     mProj.setToIdentity();
     mWorld.setToIdentity();
     if(!is2dView) {
-        mProj.perspective(18.0f, GLfloat(width()) / height(), 0.01f, 100.0f);
+        mProj.perspective(14.5f, GLfloat(width()) / height(), 0.01f, 100.0f);
         mWorld.lookAt(
-            QVector3D(4,nowY+5,maxZ+3),
-            QVector3D(0,nowY+1.4,0+0.8),
+            QVector3D(4,nowY+5,maxZ+1.5),
+            QVector3D(0.3,nowY+1.4,0+0.4),
             QVector3D(0,0,1)
         );
         mWorld.scale(-1,1,1);
     } else {
-        mWorld.translate(0, -nowY-1, 0.1);
+        mWorld.translate(0, -nowY-1+keyboardH, 0.1);
     }
 
     // openGL settings
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -115,7 +146,14 @@ void MidiOpenGLWidget::paintGL() {
 
     // ------------------ draw dynamics --------------------
 
-    // draw plane
+    drawArrivalPlane();
+    drawVerticalKeyboard();
+    drawHorizontalKeyboard();
+
+    callback();
+}
+
+void MidiOpenGLWidget::drawArrivalPlane() {
     vector<GLfloat> planeVertexs {
         -1, nowY, -maxZ,
         -1, nowY, maxZ,
@@ -127,37 +165,82 @@ void MidiOpenGLWidget::paintGL() {
     };
     drawDynamicsBegin(planeVertexs);
     drawDynamicsEnd(QVector4D(1,1,1,0.3f));
+}
 
-    // draw the "keyboard"
-    const GLfloat zDown = -0.25;
-    const GLfloat zUp = 0.25;
-    const GLfloat alpha = 0.5;
-    const GLfloat eps = 0.001f;
+void MidiOpenGLWidget::drawVerticalKeyboard() {
+    vector<GLfloat> planeVertexs;
 
     // draw white keys
     drawDynamicsBegin(planeVertexs);
-    addRect(
-        QVector3D(1.0, nowY+eps, zUp),
-        QVector3D(1.0, nowY+eps, zDown),
-        QVector3D(-1.0, nowY+eps, zUp)
-    );
-    drawDynamicsEnd(QVector4D(1,1,1,1));
-
-    // draw black keys
-    drawDynamicsBegin(planeVertexs);
     for(int i = keyStart; i <= keyEnd; i++){
-        if(isWhite(i)) continue;
-        GLfloat sx = linearMap(i, keyStart, keyEnd, -1.0, 1.0);
-        GLfloat nw = blackW/(whiteW*whiteNum)*2.0;
+        if(!isWhite(i)) continue;
+        GLfloat sx = calcNoteXCor(i);
         addRect(
-            QVector3D(sx, nowY+eps*2, zUp),
-            QVector3D(sx, nowY+eps*2, zDown+0.125),
-            QVector3D(sx+nw, nowY+eps*2, zUp)
+            QVector3D(sx, nowY+eps, zUp),
+            QVector3D(sx, nowY+eps, zDown),
+            QVector3D(sx+nWhiteW, nowY+eps, zUp)
         );
     }
-    drawDynamicsEnd(QVector4D(0,0,0,alpha));
+    drawDynamicsEnd(QVector4D(1,1,1,alpha));
 
-    callback();
+
+    // draw black keys & border lines of white keys
+    drawDynamicsBegin(planeVertexs);
+    for(int i = keyStart; i <= keyEnd; i++){
+        GLfloat sx = calcNoteXCor(i);
+        if(isWhite(i)) {
+            addRect(
+                QVector3D(sx+nWhiteW, nowY+eps*3, zUp),
+                QVector3D(sx+nWhiteW, nowY+eps*3, zDown),
+                QVector3D(sx+nWhiteW+nPadding, nowY+eps*3, zUp)
+            );
+        } else {
+            addRect(
+                QVector3D(sx, nowY+eps*2, zUp),
+                QVector3D(sx, nowY+eps*2, zDown+0.125),
+                QVector3D(sx+nBlackW, nowY+eps*2, zUp)
+            );
+        }
+    }
+    drawDynamicsEnd(QVector4D(0,0,0,alpha));
+}
+
+void MidiOpenGLWidget::drawHorizontalKeyboard() {
+    vector<GLfloat> planeVertexs;
+
+    // draw white keys
+    drawDynamicsBegin(planeVertexs);
+    for(int i = keyStart; i <= keyEnd; i++){
+        if(!isWhite(i)) continue;
+        GLfloat sx = calcNoteXCor(i);
+        addRect(
+            QVector3D(sx, nowY, -maxZ),
+            QVector3D(sx, nowY-keyboardH, -maxZ),
+            QVector3D(sx+nWhiteW, nowY, -maxZ)
+        );
+    }
+    drawDynamicsEnd(QVector4D(1,1,1,alpha));
+
+
+    // draw black keys & border lines of white keys
+    drawDynamicsBegin(planeVertexs);
+    for(int i = keyStart; i <= keyEnd; i++){
+        GLfloat sx = calcNoteXCor(i);
+        if(isWhite(i)) {
+            addRect(
+                QVector3D(sx+nWhiteW, nowY, -maxZ-eps*3),
+                QVector3D(sx+nWhiteW, nowY-keyboardH, -maxZ-eps*3),
+                QVector3D(sx+nPadding+nWhiteW, nowY, -maxZ-eps*3)
+            );
+        } else {
+            addRect(
+                QVector3D(sx, nowY, -maxZ-eps*2),
+                QVector3D(sx, nowY-keyboardH*blackH/whiteH, -maxZ-eps*2),
+                QVector3D(sx+nBlackW, nowY, -maxZ-eps*2)
+            );
+        }
+    }
+    drawDynamicsEnd(QVector4D(0,0,0,alpha));
 }
 
 void MidiOpenGLWidget::switchView() {
